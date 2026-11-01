@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Zero-Edge Pass Rates in Futures Prop-Firm Evaluations</title>
+<style>
+  @page { size: A4; margin: 25mm 25mm 25mm 25mm; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 11.5pt; line-height: 1.45; color: #000; background: #fff; margin: 0; }
+  .title { text-align: center; margin-top: 18mm; }
+  h1 { font-size: 17pt; font-weight: bold; margin: 0 0 14pt; line-height: 1.25; }
+  .author { font-size: 12pt; margin: 0; }
+  .aff { font-size: 10.5pt; font-style: italic; margin: 2pt 0 0; }
+  .date { font-size: 10.5pt; margin: 10pt 0 22pt; }
+  .abstract { margin: 0 8mm; font-size: 10.5pt; text-align: justify; }
+  .abstract h2 { text-align: center; font-size: 11pt; margin: 0 0 6pt; }
+  .kw { margin: 10pt 8mm 0; font-size: 10.5pt; }
+  .note { margin: 18pt 8mm 0; font-size: 9pt; border-top: 0.5pt solid #000; padding-top: 4pt; }
+  .newpage { page-break-before: always; }
+  h2 { font-size: 12pt; margin: 18pt 0 6pt; }
+  h3 { font-size: 11.5pt; font-style: italic; font-weight: normal; margin: 12pt 0 4pt; }
+  p { text-align: justify; margin: 0 0 8pt; }
+  .eq { display: flex; justify-content: space-between; margin: 8pt 0; font-style: italic; }
+  .eq::before { content: ""; width: 3em; }
+  .eq span { font-style: normal; width: 3em; text-align: right; }
+  table { border-collapse: collapse; margin: 8pt auto; font-size: 10pt; }
+  th, td { padding: 2pt 8pt; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead tr { border-top: 1pt solid #000; border-bottom: 0.5pt solid #000; }
+  tbody tr:last-child { border-bottom: 1pt solid #000; }
+  .cap { font-size: 10pt; text-align: center; margin: 4pt 0 2pt; }
+  .cap b { font-weight: bold; }
+  .src { font-size: 9pt; text-align: center; margin-bottom: 12pt; }
+  figure { margin: 10pt 0; text-align: center; page-break-inside: avoid; }
+  figure img { width: 82%; }
+  .refs p { padding-left: 18pt; text-indent: -18pt; font-size: 10.5pt; }
+</style>
+</head>
+<body>
+
+<div class="title">
+  <h1>Zero-Edge Pass Rates in Futures Prop-Firm Evaluations:<br>Trailing Drawdowns, Reward-to-Risk, and Transaction Costs</h1>
+  <p class="author">Benedikt Ille</p>
+  <p class="aff">Independent Researcher</p>
+  <p class="date">November 2026</p>
+</div>
+
+<div class="abstract">
+  <h2>Abstract</h2>
+  <p>Proprietary trading firms sell evaluation accounts in which a trader must reach a profit target before hitting a drawdown limit. This paper asks how often a trader with no edge passes such an evaluation, and how the answer depends on the firms' rules and on the trader's choice of reward-to-risk. Using Monte-Carlo simulation of 20 standard 50K futures evaluation accounts from eight firms, with intraday price paths, trailing drawdowns, locks, daily loss limits, consistency rules and costs, I find that the gambler's-ruin bound of 40% for a static drawdown falls to roughly 17&ndash;26% under realistic rules, with the trailing drawdown as the main driver. With a fixed profit target per trade, low reward-to-risk (a wide stop) passes slightly more often without an edge (27% at 0.3:1 versus 20% at 1:1), mainly because fewer trades are needed and costs weigh less. The advantage disappears once a small edge is present: with a five-point higher hit rate, 2:1 passes most often (62%). Low reward-to-risk is therefore not a substitute for an edge.</p>
+</div>
+<p class="kw"><b>Keywords:</b> proprietary trading, evaluation accounts, gambler's ruin, Monte-Carlo simulation, trailing drawdown, reward-to-risk</p>
+<p class="kw"><b>JEL Classification:</b> C15, C63, G11, G17</p>
+<p class="note">All results are simulations. Firm rules as published on the firms' websites in October 2026 and may have changed. Not investment advice. Code and data for the figures: github.com/benediktille-design/prop-firm-zero-edge</p>
+
+<h2 class="newpage">1. Introduction</h2>
+<p>Retail futures prop firms offer evaluation accounts for a fee. A typical 50K account requires a profit of $3,000 before the account balance falls a trailing $2,000 below its high. Traders who pass receive a funded (simulated) account and can request payouts. Because the loss per attempt is capped at the fee while payouts are open-ended, it is often argued that such accounts are attractive even without a trading edge, and that a high win rate (low reward-to-risk) helps to pass.</p>
+<p>This paper measures both claims. It establishes a zero-edge baseline: the pass rate that pure chance achieves under each firm's rules. Any strategy that is meant to be traded on these accounts should be judged against this baseline rather than against zero.</p>
+
+<h2>2. Theory: the static-drawdown bound</h2>
+<p>For a fair random walk that starts at zero and stops at either +T (target) or &minus;D (drawdown), the classical gambler's-ruin result gives</p>
+<p class="eq"><i>P(pass) = D / (D + T)</i><span>(1)</span></p>
+<p>For a 50K account (T = $3,000, D = $2,000) this is 40%. The bound holds for any position sizing as long as there is no edge and no cost. Every additional rule (a drawdown that trails the high, a daily loss limit, a consistency requirement or minimum trading days) and every cost can only lower this number. Equation (1) is therefore the ceiling for a zero-edge trader.</p>
+
+<h2>3. Model</h2>
+<h3>3.1 Account rules</h3>
+<p>Each account is described by the tuple (target, drawdown, lock, intraday/end-of-day trailing, daily limit, hard/soft limit, consistency, minimum days), taken from the firms' websites. The loss limit at time <i>t</i> is</p>
+<p class="eq"><i>Floor<sub>t</sub> = min(Peak<sub>t</sub> &minus; D, Start + Lock)</i><span>(2)</span></p>
+<p>where Peak<sub>t</sub> is the highest end-of-day balance (end-of-day trailing) or the highest intraday balance (intraday trailing). The account fails when the balance touches the floor, including open profit and loss inside a trade.</p>
+<h3>3.2 Trades</h3>
+<p>Prices follow a fair random walk in ticks, so every trade is simulated as a path and intraday drawdown rules apply while the trade is open. A trade with stop S and target R&middot;S hits the target with probability S / (S + R&middot;S) = 1 / (1 + R), which is exactly break-even before costs. An edge is modelled as a higher hit rate than this break-even probability. The trader takes two trades per day with fixed size; costs are $5 per round turn unless stated. Each configuration is simulated with 4,000&ndash;10,000 independent attempts; the sampling error of a pass rate near 25% is about &plusmn;0.7 percentage points. As a check, the simulator reproduces Equation (1) for a static drawdown (40.1%).</p>
+
+<h2>4. Results</h2>
+<h3>4.1 Pass rates by account</h3>
+<p>With a fixed 1:1 coin flip, nearly all accounts land in a narrow range: about 20% with &plusmn;$250 per trade and about 25% with &plusmn;$500 (Figure 1). The trailing drawdown alone cuts the theoretical 40% roughly in half. Larger trades pass more often because fewer steps are needed to reach the target, which gives the trailing floor fewer chances to move up. Consistency rules rarely bind in this setting, since two trades of $500 cannot exceed 50% of a $3,000 target in one day. The outlier is FTMO Pro with a hard daily limit of $1,000: at &plusmn;$500, two losing trades on one day end the account, and the pass rate falls to 8%.</p>
+<figure><img src="figures/fig3_accounts.png" alt="Pass rates by account">
+<p class="cap"><b>Figure 1.</b> Zero-edge pass rates for a 1:1 coin flip, two trades per day, $5 costs.</p>
+<p class="src">Dashed line: static-drawdown bound from Equation (1).</p></figure>
+
+<h3>4.2 Reward-to-risk with a fixed stop</h3>
+<p>Holding the stop at $250 and varying the target, low reward-to-risk is clearly worse (Figure 2). At 0.1:1 the target is $25 and a $5 cost removes a fifth of every win; the pass rate drops to 0.2%. Even without costs, low reward-to-risk passes less often because many more trades are needed to reach the target.</p>
+<figure><img src="figures/fig1_fixed_stop.png" alt="Fixed stop">
+<p class="cap"><b>Figure 2.</b> Zero-edge pass rate versus reward-to-risk with a fixed $250 stop (typical end-of-day account).</p></figure>
+
+<h3>4.3 Reward-to-risk with a fixed target, with and without an edge</h3>
+<p>The picture reverses when the target per trade is fixed at $250 and the stop widens instead. Now low reward-to-risk means larger risk per trade and fewer trades to the goal, and it passes slightly more often without an edge: 27.4% at 0.3:1 against 19.8% at 1:1 (Table 1). The source of this advantage is the larger position, not the high win rate itself; it is the same effect as in Section 4.1.</p>
+<p>With an edge, the ranking changes. What matters is the distance between the actual hit rate and the break-even hit rate. Two extra percentage points give about 31&ndash;37% at every reward-to-risk; five extra points give 50&ndash;62%, with 2:1 best. With high costs ($65 per trade, roughly a full-size contract with slippage), only low reward-to-risk survives at all.</p>
+
+<p class="cap"><b>Table 1.</b> Pass rate (%) by reward-to-risk and edge, target fixed at $250 per trade.</p>
+<table>
+  <thead><tr><th>Costs</th><th>Edge</th><th>0.2:1</th><th>0.3:1</th><th>0.5:1</th><th>0.8:1</th><th>1:1</th><th>2:1</th></tr></thead>
+  <tbody>
+    <tr><td>$5</td><td>none</td><td>25.4</td><td><b>27.4</b></td><td>23.4</td><td>20.6</td><td>19.8</td><td>14.4</td></tr>
+    <tr><td>$5</td><td>+2 pp</td><td>34.3</td><td><b>36.7</b></td><td>33.7</td><td>32.5</td><td>32.3</td><td>31.1</td></tr>
+    <tr><td>$5</td><td>+5 pp</td><td>50.0</td><td>53.5</td><td>51.3</td><td>53.0</td><td>55.0</td><td><b>62.2</b></td></tr>
+    <tr><td>$65</td><td>none</td><td><b>9.7</b></td><td>7.6</td><td>2.2</td><td>0.2</td><td>0.1</td><td>0.0</td></tr>
+    <tr><td>$65</td><td>+5 pp</td><td><b>26.8</b></td><td>23.9</td><td>10.1</td><td>3.1</td><td>1.3</td><td>0.0</td></tr>
+  </tbody>
+</table>
+<p class="src">MyFundedFutures Builder 50K rules; Topstep Standard gives values within &plusmn;1 point. Edge = hit rate above break-even in percentage points.</p>
+<figure><img src="figures/fig2_edge_grid.png" alt="Edge grid">
+<p class="cap"><b>Figure 3.</b> Pass rate versus reward-to-risk with a fixed $250 target, $5 costs.</p></figure>
+
+<h2>5. Limitations</h2>
+<p>Trade outcomes are symmetric and independent; real strategies have fat tails, slippage spikes and clustered losses, which lower pass rates further, especially for wide stops. Only the evaluation phase is modelled; whether a pass leads to payouts depends on funded-account rules (buffers, payout caps, consistency) that are not included here. Firm rules change frequently. Finally, a pass rate is not an expected value: the economics of an attempt also depend on fees, resets and payout sizes.</p>
+
+<h2>6. Conclusion</h2>
+<p>Without an edge, no 50K futures evaluation in this sample passes more often than about 30%, well below the 40% gambler's-ruin bound, because trailing drawdowns, daily limits and costs work against the trader. Choosing a low reward-to-risk raises a zero-edge pass rate by a few points at best, and only when it means taking more risk per trade. With even a small edge, the size of the edge dominates and a moderate reward-to-risk is preferable. A strategy for prop accounts should therefore be evaluated against the zero-edge baseline of the specific account, not against a pass rate of zero.</p>
+
+<div class="refs">
+<h2>References</h2>
+<p>Feller, W. (1968). <i>An Introduction to Probability Theory and Its Applications</i>, Vol. 1, 3rd ed. Wiley. Chapter XIV: Random walk and ruin problems.</p>
+<p>Firm rule pages (accessed October 2026): Apex Trader Funding, FTMO, FundedNext, Lucid Trading, MyFundedFutures, Take Profit Trader, Topstep, Tradeify.</p>
+</div>
+
+</body>
+</html>
